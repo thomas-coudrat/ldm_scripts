@@ -1,0 +1,49 @@
+#!/bin/bash
+
+#removing icm hie to his
+
+sed -e 's/HIE/HIS/g' -e 's/HID/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' receptor -i
+cp receptor receptor-bak
+
+for complex in receptor; do
+    convpdb.pl -sel tm1s:tm1e -setchain A $complex > A
+    convpdb.pl -sel tm2s:tm2e -setchain B $complex > B
+    convpdb.pl -sel tm3s:tm3e -setchain C $complex > C
+    convpdb.pl -sel tm4s:tm4e -setchain D $complex > D
+    convpdb.pl -sel tm5s:tm5e -setchain E $complex > E
+    convpdb.pl -sel tm6s:tm6e -setchain F $complex > F
+    convpdb.pl -sel tm7s:tm7e -setchain G $complex > G
+
+    cat A B C D E F G > tmp
+    sed -e 's/HSE/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' -e 's/HIE/HIS/g' -e 's/HID/HIS/g' -e '/TER/d' -e '/END/d' tmp > complex.pdb
+    rm A B C D E F G tmp
+
+    echo 6 | pdb2gmx -f complex.pdb -o complex.gro -p complex.top -i complex.itp -ignh
+    editconf -f complex.gro -o complex.out.gro -c -d 1.0 -bt cubic
+    genbox -cp complex.out.gro -o complex.b4em.gro -p complex.top
+    grompp -v -f em.mdp -o complex.em.tpr -c complex.b4em.gro -p complex.top -maxwarn 1
+    mdrun -v -s complex.em.tpr -o complex.em.trr -c complex.pdb -maxwarn 1 -g log.log
+    echo 3 3 | g_confrms -f1 receptor -f2 complex.pdb -one -o tmp.pdb
+    mv tmp.pdb initial.pdb
+    rm complex.pdb lig.pdb
+    rm log.log
+    rm *gro
+    rm *top
+    rm *tpr
+    rm *trr
+    rm *edr
+    rm *itp
+    rm md.log
+    rm mdout.mdp
+    rm *complex.top.1*
+    rm *complex.pdb.1*
+done
+
+
+for((z=1; z<=3; z++)); do
+    dist-concoord -p initial.pdb -dssp ./dssp < concoordinput
+    disco-concoord -d dist.dat -p dist.pdb -np 1 -op initial.pdb -ref -reg 10000
+    rm *DAT dis*
+    mv initial.pdb1.pdb initial.pdb
+done
+

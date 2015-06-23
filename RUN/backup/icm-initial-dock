@@ -1,0 +1,33 @@
+#!icmdir/icm64
+
+call "_startup"
+
+#!icmdir/icm64
+read pdb "aaaaa"
+convertObject a_* yes yes yes no
+
+delete disulfide bond all
+make disulfide disul1 disul2
+
+refineModel 5 no
+delete a_reseptor_rec.
+delete a_beforeRef.
+delete map
+
+dockUpdateGlobals "reseptor" -1
+as_graph=Sphere(Res((dockingregion)) 0.0)
+currentDockProj.data[8] = "yes"
+tempsel = as_graph
+dock2SetupReceptor "reseptor" a_ tempsel no "none"
+dock5CalcMaps "reseptor" 0.5 4.0 no 
+currentDockProj.data[1] = "reseptor"
+read mol2 "ligand.mol2" 
+as2_out = Obj( a_ & a_!ICM. )
+convert2Dto3D as2_out yes yes no yes
+dock6gridLig currentDockProj.data[1] a_3. no no yes 5. no no
+load conf 1
+move a_3. a_1.
+set object a_1.
+write object auto a_1. "aaaaa.ob"
+quit
+

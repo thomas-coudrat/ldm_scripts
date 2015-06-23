@@ -1,0 +1,360 @@
+#!/bin/bash
+
+echo "#########################"
+echo "#########################"
+echo "THIS IS TCONCOORD DOCKING"
+echo "#########################"
+echo "#########################"
+
+echo " "
+
+echo "########################################"
+echo "GENERATING CONCOORD RESTRAINTS and STUFF"
+echo "########################################"
+echo `ls`
+
+module load fftw-intel/3.3.3
+sed 's/B.. LIG/N   LIG/g' initial.pdb -i
+
+for((z=1; z<=res1m; z++)); do
+    echo 0 >> tmp
+done
+
+for((z=res1; z<=res2; z++)); do
+    echo 0 >> tmp
+done
+
+for((z=res2p; z<=res3m; z++)); do
+    echo 1 >> tmp
+done
+
+for((z=res3; z<=res4; z++)); do
+    echo 0 >> tmp
+done
+
+for((z=res4p; z<=res5m; z++)); do
+    echo 1 >> tmp
+done
+
+for((z=res5; z<=res6; z++)); do
+    echo 0 >> tmp
+done
+
+for((z=res6p; z<=res7m; z++)); do
+    echo 1 >> tmp
+done
+
+for((z=res7; z<=res8; z++)); do
+    echo 0 >> tmp
+done
+
+cat -n tmp > concoordrestraints.dat
+numberofresidues=`grep -c CA initial.pdb`
+sed "1i $numberofresidues" concoordrestraints.dat -i
+rm tmp
+echo q | make_ndx -f initial.pdb
+echo 2 | editconf -f initial.pdb -o initial.pdb -n
+rm *initial.pdb.1* index.ndx
+editconf -f initial.pdb -o initial.pdb -bf concoordrestraints.dat >& tmp
+rm *initial.pdb.1* tmp
+sed 's/  1.00  0.00/  0.00  0.00/g' initial.pdb -i
+
+dist-concoord -p initial.pdb -dssp ./dssp -m 200  -q < concoordinput
+disco-concoord -s xrandx -d dist.dat -p dist.pdb -np concoordruns -ox tdisco.xtc
+
+echo q | make_ndx -f dist.pdb
+echo 1 | trjconv -f tdisco.xtc -s dist.pdb -sep -o receptor.pdb  -n
+echo 1 | editconf -f dist.pdb -o dist.pdb -n
+rm *dist.pdb.1*
+mv dist.pdb receptor00.pdb
+rm *DAT dist* disco*
+
+for pdb in receptor*pdb; do
+    echo -e "DEBUG1_receptorXX $pdb"
+    editconf -f $pdb -o $pdb.gro
+    editconf -f $pdb.gro -o $pdb
+    rm *$pdb.1* $pdb.gro
+done
+
+###picking those structure under 1.2A
+echo "###################################"
+echo "PICKING THOSE STRUCTURES UNDER 1.2A"
+echo "###################################"
+echo `ls`
+
+rm RMSD
+for pdb in receptor*pdb; do
+    echo -e "DEBUG2_receptorXX $pdb"
+    echo 3 3 | g_confrms -f1 xxxreceptorxxx -f2 $pdb -one -o fit >& tmp
+    rm fit.gro
+    echo $pdb `grep Root tmp` | awk '{print $1,$10}' >> RMSD
+    echo $pdb
+done
+
+awk '$2 < xxrmsdxx {print $1}' RMSD > undertwoA
+
+rm -r tmp
+mkdir tmp
+for pdb in `cat undertwoA`; do
+    mv $pdb tmp
+done
+rm receptor*pdb
+mv tmp/receptor*pdb ./
+rm -r tmp
+
+####sidechain moves only
+#generating positional restraints for all except pocket sidechains
+echo "#########################################################################"
+echo "GENERATING POSITIONAL RESTRAINTS FOR ALL EXCEPT POCKET SIDECHAINS"
+echo "#########################################################################"
+echo `ls`
+
+sed -e 's/a_1\///g' -e 's/,/ /g' -e 's/[0-9].*/r&/g' -e '/[0-9].*/a\1\&\!10' restraints | sed '/1\&/a\q' > ndx-posres
+
+for pdb in receptor[0-9]*pdb; do
+    echo -e "DEBUG2bis_receptorXX $pdb"
+    echo "ABOUT TO RUN MAKE_NDX"
+    make_ndx -f $pdb < ndx-posres
+    echo "ABOUT TO RUN TDIST"
+    echo 11 | tdist -s $pdb -inp input.cpf -pos index.ndx
+    echo "ABOUT TO RUN TDISCO"
+    tdisco -n concoordsides
+    echo "ABOUT TO RUN TRJCONV"
+    echo 1 | trjconv -f tdisco.xtc -s ref.pdb -o $pdb.pdb -sep
+    rm contab.dat grpdef.ndx grp.pml hbonds.dat ref.pdb restraints tdisco* tdist*
+done
+rm ndx-posres
+
+
+############################################################################################################################
+
+
+
+
+########################setting up parameters picking correct pocket
+echo "#########################################################################"
+echo "SETTING UP PARAMETERS PICKING CORRECT POCKET"
+echo "#########################################################################"
+echo `ls`
+
+##make sure all the HIS are HIS in PDBs
+sed -e 's/HSE/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' -e 's/HIE/HIS/g' -e 's/HID/HIS/g' *pdb -i
+
+# Editing pocket residues: the file 'pocket' is created after the binding
+# pocket residue definition defined by the user at the top of control-script
+# (because the first 'pocket' file is written based on that definition)
+sed -e 's/a_1\///g' -e 's/,/ /g' -e 's/[0-9].*/r &/g' -e '/r/a\q' pocket > pocket-edited
+# The two following commands will create a .pdb file made up of just the
+# binding pocket residues
+make_ndx -f initial.pdb < pocket-edited >& tmp
+echo 10 | editconf -f initial.pdb -o pocket.pdb -n >& tmp
+rm index.ndx tmp
+
+# Get the residue name and number for residues in the pocket: they are grabed
+# by a grep on the alpha carbons, and written to a file named 'residue-column'
+# From this selection of residues, the hydrophobic residues are removed
+grep CA pocket.pdb | awk '{print $4$5}' | sed -e '/ALA/d' -e '/GLY/d' -e '/ILE/d' -e '/LEU/d' -e '/MET/d' -e '/VAL/d' > residues-column
+
+# And this counts the number of residues left in the binding pocket, after
+# hydrophobic residues have been removed
+bindingpocketnumber=`grep -c "[0-9]" residues-column`
+echo "DEBUG_bindingPocketNumber: $bindingpocketnumber"
+#mv pocket pocket_SAVE
+#mv pocket-edited pocket-edited_SAVE
+#mv pocket.pdb pocket.pdb_SAVE
+rm  pocket  pocket-edited  pocket.pdb
+
+#######icm pocket finder and edit output
+echo "#########################################################################"
+echo "ICM POCKET FINDER AND EDIT OUTPUT"
+echo "#########################################################################"
+echo `ls`
+
+# Execute the ICM script which gets the pockets for the receptor, based on the
+# selection of cytoplasmic residues given in control-script. The residues other
+# than the cytoplasmic residues are searched for pockets
+for pdb in receptor[0-9]*pdb; do
+    echo -e "DEBUG3a_receptorXX $pdb"
+    sed 's/aaaaa/'$pdb'/g' icm-pockets > icmscript
+    icmdir/icm64 -vlscluster -s -picmdir < icmscript >& tmp
+    rm tmp
+done
+
+# Extract the list of residues (and all info) corresponding to the first and
+# best pocket for each .tab file saved earlier
+for tab in receptor*.tab; do
+    echo -e "DEBUG3b_receptorTab $tab"
+    grep "g_pocket1 a" $tab > $tab-pocket
+done
+
+# Change the pocket definition to a file that contains the residues with their
+# 3 letter code
+for pocket in receptor*pocket; do
+    echo -e "DEBUG3c_receptorPocket $pocket"
+    grep -o '[A-Z][0-9][:,"|]' $pocket >1
+    grep -o '[A-Z][0-9][0-9][:,"|]' $pocket >2
+    grep -o '[A-Z][0-9][0-9][0-9][:,"|]' $pocket >3
+    grep -o '[A-Z][0-9][0-9][0-9][0-9][:,"|]' $pocket >4
+    cat 1 2 3 4 > 5
+    sed -e 's/,//g' -e 's/://g'  -e 's/"//g' -e 's/|//g' 5 > edit
+
+    sed -e 's/A/ 1aa /g' -e 's/C/ 2aa /g' -e 's/D/ 3aa /g' -e 's/E/ 4aa /g' -e 's/F/ 5aa /g' -e 's/G/ 6aa /g' -e 's/H/ 7aa /g' -e 's/I/ 8aa /g' -e 's/K/ 9aa /g' -e 's/L/ 10aa /g' -e 's/M/ 11aa /g' -e 's/N/ 12aa /g' -e 's/P/ 13aa /g' -e 's/Q/ 14aa /g' -e 's/R/ 15aa /g' -e 's/S/ 16aa /g' -e 's/T/ 17aa /g' -e 's/V/ 18aa /g' -e 's/W/ 19aa /g' -e 's/Y/ 20aa /g' -e 's/ 1aa /ALA/g' -e 's/ 2aa /CYS/g' -e 's/ 3aa /ASP/g' -e 's/ 4aa /GLU/g' -e 's/ 5aa /PHE/g' -e 's/ 6aa /GLY/g' -e 's/ 7aa /HIS/g' -e 's/ 8aa /ILE/g' -e 's/ 9aa /LYS/g' -e 's/ 10aa /LEU/g' -e 's/ 11aa /MET/g' -e 's/ 12aa /ASN/g' -e 's/ 13aa /PRO/g' -e 's/ 14aa /GLN/g' -e 's/ 15aa /ARG/g' -e 's/ 16aa /SER/g' -e 's/ 17aa /THR/g' -e 's/ 18aa /VAL/g' -e 's/ 19aa /TRP/g' -e 's/ 20aa /TYR/g'  edit > $pocket
+
+    rm 1
+    rm 2
+    rm 3
+    rm 4
+    rm 5
+    rm edit
+done
+
+
+
+########counting pocketresidues from icmpocket & gettign rid of those structures with poor pockets ####
+echo "#########################################################################"
+echo "COUNTING POCKET RESIDUES FROM ICMPOCKET and GETTING RID OF THOSE
+STRUCTURES WITH POOR POCKETS"
+echo "#########################################################################"
+echo `ls`
+
+
+rm pocketcount
+# This creates a file that lists all the residues that were in the previous
+# pocket, and are also in the pocket found by pocketFinder. It makes sure the
+# pocket doesn't drastically change, and forces incremental 'induced fit'
+for pocket in *tab-pocket; do
+    echo -e "DEBUG4a_pockets $pocket"
+    echo $pocket `grep -f residues-column -c $pocket` >> pocketcount
+done
+
+# This defines the 'number of residues to form a pocket' cutoff (bc gets the
+# floor number of the original number of binding pocket residues times 8/10th,
+# this original number does not count small hydrophobic residues)
+pocketresiduescutoff=`echo "$bindingpocketnumber * 8 / 10" | bc`
+echo $pocketresiduescutoff
+# If column 2 is larger than 'pocketresiduescutoff', write column 1
+# to goodpocket text file: that means that the new binding pocket defined by
+# pocketFinder has to be at least 8/10th in number of residues of the original
+# binding pocket
+awk '$2 >= '$pocketresiduescutoff' {print $1}' pocketcount >> goodpocket
+sed 's/.tab-pocket//g' goodpocket -i
+
+
+echo "DEBUG4b_goodPocketFile "
+more goodpocket
+
+mkdir tmp
+for pdb in `cat goodpocket`; do
+    echo -e "DEBUG4c_goodPocket $pdb"
+    mv $pdb tmp
+done
+
+rm receptor*pdb*
+mv tmp/* ./
+rm -r tmp
+
+
+#####adding sidechains onto fitted fragments in areas distinct from docking area
+echo "#########################################################################"
+echo "ADDING SIDECHAINS ONTO FITTED FRAGMENTS IN AREAS DISTINCT FROM DOCKING
+AREA"
+echo "#########################################################################"
+echo `ls`
+
+for pdb in receptor[0-9]*.pdb; do
+    echo -e "DEBUG5_receptorXX $pdb"
+    editconf -f $pdb -o $pdb -label " "
+    rm *$pdb.1*
+    ./sccomp -mu=cytoplasmicresidues -l=1 $pdb
+    mv *_sccomp.pdb $pdb.sccomp.pdb
+    rm $pdb
+done
+
+####minimize backbone and reform
+echo "#########################################################################"
+echo "MINIMIZE BACKBONE AND REFORM"
+echo "#########################################################################"
+echo `ls`
+
+for complex in receptor*sccomp.pdb; do
+    grep "ATOM" $complex > complex.pdb
+
+    convpdb.pl -sel tm1s:tm1e -setchain A complex.pdb > A
+    convpdb.pl -sel tm2s:tm2e -setchain B complex.pdb > B
+    convpdb.pl -sel tm3s:tm3e -setchain C complex.pdb > C
+    convpdb.pl -sel tm4s:tm4e -setchain D complex.pdb > D
+    convpdb.pl -sel tm5s:tm5e -setchain E complex.pdb > E
+    convpdb.pl -sel tm6s:tm6e -setchain F complex.pdb > F
+    convpdb.pl -sel tm7s:tm7e -setchain G complex.pdb > G
+
+    cat A B C D E F G > tmp
+    sed -e 's/HSE/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' -e 's/HIE/HIS/g' -e 's/HID/HIS/g' -e '/TER/d' -e '/END/d' tmp > complex.pdb
+    rm A B C D E F G tmp
+
+    echo 6 | pdb2gmx -f complex.pdb -o complex.gro -p complex.top -i $complex.itp
+    editconf -f complex.gro -o complex.out.gro -c -d 1.0 -bt cubic
+    genbox -cp complex.out.gro -o complex.b4em.gro -p complex.top
+    grompp -v -f em.mdp -o complex.em.tpr -c complex.b4em.gro -p complex.top -maxwarn 1
+    mdrun -v -s complex.em.tpr -o complex.em.trr -c complex.pdb -maxwarn 1 -g log.log
+    echo 3 3 | g_confrms -f1 xxxreceptorxxx -f2 complex.pdb -one -o tmp.pdb
+    mv tmp.pdb $complex
+    rm complex.pdb lig.pdb
+    rm log.log
+    rm *gro
+    rm *top
+    rm *tpr
+    rm *trr
+    rm *edr
+    rm *itp
+    rm md.log
+    rm mdout.mdp
+    rm *complex.top.1*
+    rm *complex.pdb.1*
+done
+
+#### ligand docking and refinement
+echo "#########################################################################"
+echo "LIGAND DOCKING AND REFINEMENT"
+echo "#########################################################################"
+echo `ls`
+
+for pdb in receptor*sccomp.pdb; do
+    sed "s|aaaaa|$pdb|g" icm-ligand-dock > dock
+    icmdir/icm64 -vlscluster -s -picmdir < dock >& tmp &
+
+    pid1=$!
+    for((s=1; s<=sleep1; s++)); do
+        checkpid=`ps -u user | grep $pid1 -c`
+        if [ $checkpid -eq 0 ] ; then
+            break
+        else
+            sleep 10s
+        fi
+    done
+
+    kill -kill $pid1
+    kill -KILL $pid1
+    rm tmp
+
+    sed "s|aaaaa|$pdb|g" icm-ligand-dock-refine-score > refine
+    icmdir/icm64 -vlscluster -s -picmdir < refine >& $pdb.score &
+
+    pid2=$!
+    for((s=1; s<=sleep2; s++)); do
+        checkpid=`ps -u user | grep $pid2 -c`
+        if [ $checkpid -eq 0 ] ; then
+            break
+        else
+            sleep 10s
+        fi
+    done
+
+    kill -kill $pid2
+    kill -KILL $pid2
+
+    rm dock refine
+    rm reseptor*
+    rm *inx
+    rm receptor*cnf $pdb.ob $pdb
+done
+

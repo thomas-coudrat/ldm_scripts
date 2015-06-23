@@ -1,0 +1,19 @@
+title               =  mitwasser
+cpp                 =  /lib/cpp
+define              =  -DPOSRES
+constraints         =  none
+integrator          =  l-bfgs
+dt                  =  0.002    ; ps !
+nsteps              =  5000
+ns_type             =  grid
+;vdw
+vdw_type            =  shift
+;Electrostatics
+coulombtype         =  PME
+;
+;       Energy minimizing stuff
+;
+emtol               =   100
+emstep              =   0.01
+epsilon_r           =   1
+

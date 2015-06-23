@@ -1,0 +1,22 @@
+#!icmdir/icm64
+
+call "_startup"
+
+#!icmdir/icm64
+
+openFile "aaaaa.ob" 0 no no no no "" 
+refineModel 5 no
+delete a_reseptor_rec.
+delete a_beforeRef.
+delete map
+refineLigandSphere a_1.ligand 5. 2
+load conf 1
+as2_out = a_1.
+minimize v_//x* & as2_out
+minimize v_//M,P & as2_out "vw,14,hb,to,ss,el" 500
+write pdb "aaaaa-rl.pdb"
+moveMol Mol( a_*.ligand/ ) ""
+scanScoreExternal a_1. a_2.
+
+quit
+

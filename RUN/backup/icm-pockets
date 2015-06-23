@@ -1,0 +1,10 @@
+#!icmdir/icm
+
+call "_startup"
+
+#!icmdir/icm
+read pdb "aaaaa"
+convertObject yes yes no no
+icmPocketFinder a_1/1:res1m,res2p:res3m,res4p:res5m,res6p:res7m 4.6 yes yes
+write table POCKETS "aaaaa.tab"
+quit

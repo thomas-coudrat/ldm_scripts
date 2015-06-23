@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+for ((i=0;i<=39;i++)); do
+    mkdir $i
+    cp backup/* -r $i
+    cd $i
+    sed "s|xxxyyyxxx|$i|g" control-script -i
+    cd ../
+    echo $i
+done
