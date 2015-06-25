@@ -11,8 +11,8 @@ ligand=zm2
 #reference name in mol2 file
 ligandname=ZM2
 ###################################
-###### Information for SLURM ######
-###################################
+# CLuster job management
+framework=SLURM
 runname=a2a_3pwh_zm-xxxyyyxxx-
 
 ############TM start and stops
@@ -102,7 +102,6 @@ sed "s|ligand|$ligand|g"  icm-initial-dock* icm-ligand-dock icm-ligand-dock-refi
 sed -e "s|concoordruns|$concoordruns|g" -e "s|concoordsides|$concoordsides|g" tconcoord-docking* -i
 sed "s|xxrmsdxx|$xxrmsdxx|g" tconcoord-docking* -i
 sed "s|icmdir|$icmdir|g" icm-initial-dock* initial-docking tconcoord-docking* icm-ligand-dock icm-ligand-dock-refine-score  -i
-sed "s|runname|$runname|g" slurm-script slurm-script-initial -i
 sed -e "s|sleep1|$sleep1|g" -e "s|sleep2|$sleep2|g" tconcoord-docking* -i
 sed -e "s|user|$user|g"  tconcoord-docking* -i
 sed -e "s|disul1|$disul1|g" -e "s|disul2|$disul2|g" icm-initial-dock icm-ligand-dock -i
@@ -113,6 +112,9 @@ sed "s|receptor|$receptor|g" initial-docking -i
 sed "s|xxxreceptorxxx|$receptor|g" tconcoord-docking* -i
 sed "s|ligandname|$ligandname|g" initial-docking -i
 sed -e "s|tm1s|$tm1s|g"  -e "s|tm1e|$tm1e|g" -e "s|tm2s|$tm2s|g" -e "s|tm2e|$tm2e|g" -e "s|tm3s|$tm3s|g" -e "s|tm3e|$tm3e|g" -e "s|tm4s|$tm4s|g" -e "s|tm4e|$tm4e|g" -e "s|tm5s|$tm5s|g" -e "s|tm5e|$tm5e|g" -e "s|tm6s|$tm6s|g" -e "s|tm6e|$tm6e|g" -e "s|tm7s|$tm7s|g" -e "s|tm7e|$tm7e|g" tconcoord-docking* initial-docking -i
+# Only one of SLURM or QSUB is used, however for simplicity files for both frameworks are kept in directory
+sed "s|runname|$runname|g" slurm-script slurm-script-initial -i
+sed "s|runname|$runname|g" qsub-script qsub-script-initial -i
 # Definition of the residues ICM will try to find pockets, after the initial
 # docking stage
 sed -e  "s|res1m|$res1m|g" -e  "s|res1|$res1|g" -e  "s|res2p|$res2p|g" -e  "s|res2|$res2|g" -e  "s|res3m|$res3m|g" -e  "s|res3|$res3|g" -e  "s|res4p|$res4p|g" -e  "s|res4|$res4|g" -e  "s|res5m|$res5m|g" -e  "s|res5|$res5|g" -e  "s|res6p|$res6p|g" -e  "s|res6|$res6|g" -e  "s|res7m|$res7m|g" -e  "s|res7|$res7|g" -e  "s|res8|$res8|g" tconcoord-docking* icm-pockets* -i
@@ -122,40 +124,76 @@ echo $dockingregion > pocket
 
 ####################################################################################################################################
 
-dir=`pwd`
-echo $dir
-sed "s|xxx|$dir|g" slurm-script-initial -i
+# Starting the initial script, SLURM
+if [ framework -eq "SLURM"] ; then
+    dir=`pwd`
+    echo $dir
+    sed "s|xxx|$dir|g" slurm-script-initial -i
 
-# Catch the ID of the job that is submitted
-jobID=( `sbatch slurm-script-initial` )
-jobID=${jobID[3]}
+    # Catch the ID of the job that is submitted
+    jobID=( `sbatch slurm-script-initial` )
+    jobID=${jobID[3]}
 
-echo "This is the job that was ran here: $jobID"
+    echo "This is the job that was ran here: $jobID"
 
-# Loop until all jobs submitted are done
-while :
-do
-    # Check if job is running (this gives a count of the jobs running)
-    runningjobsline=`squeue -j $jobID`
-    runningjobs=`squeue -j $jobID | egrep -e " R " -e " PD " -c`
-    echo "This job is running:"
-    echo $runnningjobsline
-    echo "Number of jobs running"
-    echo $runningjobs
+    # Loop until all jobs submitted are done
+    while :
+    do
+        # Check if job is running (this gives a count of the jobs running)
+        runningjobsline=`squeue -j $jobID`
+        runningjobs=`squeue -j $jobID | egrep -e " R " -e " PD " -c`
+        echo "This job is running:"
+        echo $runnningjobsline
+        echo "Number of jobs running"
+        echo $runningjobs
 
-    # As long as the count is not 0, sleep 1 min and loop again
-    if [ $runningjobs -gt 0 ] ; then
-        echo running
-        sleep 1m
-    else
-        break
-    fi
-done
+        # As long as the count is not 0, sleep 1 min and loop again
+        if [ $runningjobs -gt 0 ] ; then
+            echo running
+            sleep 1m
+        else
+            break
+        fi
+    done
 
 
-# remove the slurm output
-rm slurm-$jobID.out
-echo dunn diddly dunn
+    # remove the slurm output
+    rm slurm-$jobID.out
+    echo dunn diddly dunn
+
+# Or QSUB
+elif [ framework -eq "QSUB"] ; then
+    dir=`pwd`
+    echo $dir
+    sed "s|xxx|$dir|g" qsub-script-initial -i
+
+
+    # Catch the ID of the job that is submitted
+    jobID=( `qsub qsub-script-initial` )
+    jobID=${jobID[2]}
+
+    echo "This is the ID of the job submitted: $jobID"
+
+    while :
+    do
+        # The value of $runningjobs will be 1 if that job is still running,
+        # and 0 otherwise
+        runningjobs=`qstat -j $jobID | egrep -e "job_number" -c`
+        echo $runningjobs
+
+        # As long as the count is not 0, sleep 1 minute and loop again
+        if [ $runningjobs -gt 0 ] ; then
+            echo running
+            sleep 1m
+        else
+            break
+        fi
+    done
+
+    # remove the qsub output
+    rm $runname*.e* $runname*.o*
+    echo dunn diddly dunn
+fi
 
 
 #############################################2nd part###################################
@@ -164,7 +202,7 @@ mkdir backup-initial
 cp * backup-initial
 mv PARNIS_AA backup-initial
 
-rm $receptor *.mol2 icm-initial-dock icm-ligand-dock icm-ligand-dock-refine-score initial.pdb input.cpf slurm-script tconcoord-docking  bbdep00.Nov.sortlib bbind00.Nov sccomp config.psp opus_psp em.mdp concoordinput $receptor-bak initial-docking restraints icm-pockets pocket receptorligandndx tconcoord-docking-lig 
+rm $receptor slurm-script qsub-script *.mol2 icm-initial-dock icm-ligand-dock icm-ligand-dock-refine-score initial.pdb input.cpf tconcoord-docking  bbdep00.Nov.sortlib bbind00.Nov sccomp config.psp opus_psp em.mdp concoordinput $receptor-bak initial-docking restraints icm-pockets pocket receptorligandndx tconcoord-docking-lig
 
 ###############################
 ###############################
@@ -246,76 +284,131 @@ for((z=1; z<=$noofrounds; z++)); do
         cd ../
     done
 
-    echo -e "\t Modifying the SLURM commands, and running them"
+    if [ framework -eq "SLURM"] ; then
+        echo -e "\t Modifying the SLURM commands, and running them"
 
-    ########################setting up SLURM stuff######
-    cp backup-initial/slurm-script ./
-    dir=`pwd`
-    echo $dir
-    sed "s|xxx|$dir|g" slurm-script -i
+        ########################setting up SLURM stuff######
+        cp backup-initial/slurm-script ./
+        dir=`pwd`
+        echo $dir
+        sed "s|xxx|$dir|g" slurm-script -i
 
 
-    #
-    # Obsolete: for separate slurm
-    #
-    #for((b=1; b<=$dirs; b++)); do
-    #    sed "s|yyy|$b|g" slurm-script > slurm-script-$b
-    #done
+        #
+        # Obsolete: for separate slurm
+        #
+        #for((b=1; b<=$dirs; b++)); do
+        #    sed "s|yyy|$b|g" slurm-script > slurm-script-$b
+        #done
 
-    # New master script running all '20' at once
-    #cp slurm-script slurm-script-0
-    sed "s|MY_DIR_NUMBER|$dirs|g" slurm-script > slurm-script-0
+        # New master script running all '20' at once
+        #cp slurm-script slurm-script-0
+        sed "s|MY_DIR_NUMBER|$dirs|g" slurm-script > slurm-script-0
 
-    # In this for loop, all numbered slurm scripts in this directory are submitted,
-    # and the variable jobIDs keeps the IDs of all those jobs
-    jobIDs=""
-    for start in slurm-script-[0-9]*; do
-        jobID=( `sbatch $start` )
-        echo -e "$jobID"
-        jobID=${jobID[3]}
-        jobIDs="$jobIDs $jobID"
-        sleep 2s
-    done
+        # In this for loop, all numbered slurm scripts in this directory are submitted,
+        # and the variable jobIDs keeps the IDs of all those jobs
+        jobIDs=""
+        for start in slurm-script-[0-9]*; do
+            jobID=( `sbatch $start` )
+            echo -e "$jobID"
+            jobID=${jobID[3]}
+            jobIDs="$jobIDs $jobID"
+            sleep 2s
+        done
 
-    echo -e "\t Now that they were ran, checking to see when they are finished:"
-    echo -e "$jobIDs"
+        echo -e "\t Now that they were ran, checking to see when they are finished:"
+        echo -e "$jobIDs"
 
-    # This while loop will check every minute if all jobs have finished, using the
-    # jobIDs variable and making sure all jobs are completed before moving on
-    while :
-    do
-        runningjobs=0
+        # This while loop will check every minute if all jobs have finished, using the
+        # jobIDs variable and making sure all jobs are completed before moving on
+        while :
+        do
+            runningjobs=0
 
-        # This inner loop will count the number of jobs still running
-        # (status R or PD means they are not). A job is done when it returns
-        # that its ID is invalid, it is does not count towards that total
-        for jobID in $jobIDs; do
-            jobIsAlive=`squeue -j $jobID | egrep -e " $jobID " -c`
-            #echo "This job"
-            #echo $jobID
-            #echo $runningjobline
-            #echo "---"
+            # This inner loop will count the number of jobs still running
+            # (status R or PD means they are not). A job is done when it returns
+            # that its ID is invalid, it is does not count towards that total
+            for jobID in $jobIDs; do
+                jobIsAlive=`squeue -j $jobID | egrep -e " $jobID " -c`
+                #echo "This job"
+                #echo $jobID
+                #echo $runningjobline
+                #echo "---"
 
-            # If runningjobline does not contain the word 'Invalid' (case where the job
-            # name does not exist anymore)
-            if [ $jobIsAlive -eq 1 ]; then
-                runningjob=`squeue -j $jobID | egrep -e " R " -e " PD " -c`
-                runningjobs=`expr $runningjobs + $runningjob`
+                # If runningjobline does not contain the word 'Invalid' (case where the job
+                # name does not exist anymore)
+                if [ $jobIsAlive -eq 1 ]; then
+                    runningjob=`squeue -j $jobID | egrep -e " R " -e " PD " -c`
+                    runningjobs=`expr $runningjobs + $runningjob`
+                fi
+            done
+
+            # Echo the number of jobs still running
+            echo $runningjobs
+            #runningjobs=`squeue -n $runname | egrep -e " R " -e " PD " -c`
+            #echo $runningjobs
+            # When the jobs count still running hits 0, break the while loop
+            if [ $runningjobs -gt 0 ] ; then
+                echo running
+                sleep 1m
+            else
+                break
             fi
         done
 
-        # Echo the number of jobs still running
-        echo $runningjobs
-        #runningjobs=`squeue -n $runname | egrep -e " R " -e " PD " -c`
-        #echo $runningjobs
-        # When the jobs count still running hits 0, break the while loop
-        if [ $runningjobs -gt 0 ] ; then
-            echo running
-            sleep 1m
-        else
-            break
-        fi
-    done
+    elif [ framework -eq "QSUB"] ; then
+
+        echo -e "\t Modifying the QSUB commands, and running them"
+
+        ########################setting up QSUB stuff######
+        cp backup-initial/qsub-script ./
+        dir=`pwd`
+        echo $dir
+        sed "s|xxx|$dir|g" qsub-script -i
+
+        for((b=1; b<=$dirs; b++)); do
+            sed "s|yyy|$b|g" qsub-script > qsub-script-$b
+        done
+
+
+        # In this for loop, all numbered qsub scripts in this directory are submitted,
+        # and the variable jobIDs keeps the IDs of all those jobs
+        jobIDs=""
+        for start in qsub-script-[0-9]*; do
+            jobID=( `qsub $start` )
+            echo -e "$jobID"
+            jobID=${jobID[2]}
+            jobIDs="$jobIDs $jobID"
+            sleep 2s
+        done
+
+        echo -e "\t Now that they were ran, checking to see when they are finished:"
+        echo -e "$jobIDs"
+
+        while :
+        do
+            runningjobs=0
+
+            # A job running or queued will be found in the queue, and will have
+            # the keyword "job_number" present when qstat -j $jobID is ran
+            for jobID in $jobIDs; do
+                runningjob=`qstat -j $jobID | egrep -e "job_number" -c`
+                runningjobs=`expr $runningjobs + $runningjob`
+            done
+
+            echo $runningjobs
+
+            # If the number of jobs still running is greater than 0, then keep
+            # running for 1 more minute
+            if [ $runningjobs -gt 0 ] ; then
+                echo running
+                sleep 1m
+            else
+                break
+            fi
+
+        done
+    fi
 
     echo -e "\t Getting icmscore for each solution, from each dir, and puting them into a dir called icmscore"
 
@@ -369,7 +462,11 @@ for((z=1; z<=$noofrounds; z++)); do
 
     #######get rid of unwanted SLURM stuff#####
 
-    rm slurm-script-[0-9]*
+    if [ framework -eq "SLURM"] ; then
+        rm slurm-script-[0-9]*
+    elif [ framework -eq "QSUB"] ; then
+        rm qsub-script-[0-9]*
+    fi
     rm *.[eo]*
     rm -r icmscore
     rm -r [0-9]*
@@ -386,8 +483,8 @@ for((z=1; z<=$noofrounds; z++)); do
 done
 
 rm slurm-script*
+rm qsub-script*
 #rm *.[eo]*
 #rm -r icmscore
 #rm -r [0-9]*
 rm -r backup-initial
-
