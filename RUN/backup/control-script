@@ -125,7 +125,7 @@ echo $dockingregion > pocket
 ####################################################################################################################################
 
 # Starting the initial script, SLURM
-if [ framework -eq "SLURM"] ; then
+if [ "$framework" == "SLURM"] ; then
     dir=`pwd`
     echo $dir
     sed "s|xxx|$dir|g" slurm-script-initial -i
@@ -162,7 +162,7 @@ if [ framework -eq "SLURM"] ; then
     echo dunn diddly dunn
 
 # Or QSUB
-elif [ framework -eq "QSUB"] ; then
+elif [ "$framework" == "QSUB"] ; then
     dir=`pwd`
     echo $dir
     sed "s|xxx|$dir|g" qsub-script-initial -i
@@ -284,7 +284,7 @@ for((z=1; z<=$noofrounds; z++)); do
         cd ../
     done
 
-    if [ framework -eq "SLURM"] ; then
+    if [ "$framework" == "SLURM"] ; then
         echo -e "\t Modifying the SLURM commands, and running them"
 
         ########################setting up SLURM stuff######
@@ -356,7 +356,7 @@ for((z=1; z<=$noofrounds; z++)); do
             fi
         done
 
-    elif [ framework -eq "QSUB"] ; then
+    elif [ "$framework" == "QSUB"] ; then
 
         echo -e "\t Modifying the QSUB commands, and running them"
 
@@ -462,9 +462,9 @@ for((z=1; z<=$noofrounds; z++)); do
 
     #######get rid of unwanted SLURM stuff#####
 
-    if [ framework -eq "SLURM"] ; then
+    if [ "$framework" == "SLURM"] ; then
         rm slurm-script-[0-9]*
-    elif [ framework -eq "QSUB"] ; then
+    elif [ "$framework" == "QSUB"] ; then
         rm qsub-script-[0-9]*
     fi
     rm *.[eo]*
