@@ -15,7 +15,7 @@ opusrota=/vlsci/VR0024/tcoudrat/bin/OPUS_Rota
 # Cluster queuing system: SLURM or QSUB
 framework=SLURM
 # Task name
-runname=a2a_3pwh_zm-xxxyyyxxx-
+runname=b2_4LDE_BI-xxxyyyxxx-
 # Username on Cluster
 user=tcoudrat
 
@@ -24,33 +24,33 @@ user=tcoudrat
 #####################
 
 # Name of receptor PDB file
-receptor=a2a_3pwh_noLoop.pdb
+receptor=b2_4lde_ldm_noLoop.pdb
 # Name of .mol2 file
-ligand=zm2
+ligand=p0g
 # Reference name in mol2 file
-ligandname=ZM2
+ligandname=P0G
 # TM start and stops
 tm1s=1
-tm1e=26
-tm2s=27
-tm2e=55
-tm3s=56
-tm3e=89
-tm4s=90
-tm4e=111
-tm5s=112
-tm5e=153
-tm6s=154
-tm6e=192
-tm7s=193
-tm7e=231
+tm1e=31
+tm2s=32
+tm2e=60
+tm3s=61
+tm3e=91
+tm4s=92
+tm4e=115
+tm5s=116
+tm5e=150
+tm6s=151
+tm6e=183
+tm7s=184
+tm7e=219
 # Position of disulphide between top of tm3 and ecl & others
-disul1=a_1/59
-disul2=a_1/112
+disul1=a_1/61
+disul2=a_1/116
 # Residue number of positions where icm searchs in docking
-dockingregion=a_1/7,50,51,53,54,63,66,67,70,114,123,127,132,180,183,184,197,200
+dockingregion=a_1/59,64,65,68,69,118,119,120,174,175,178,181,182,184,187,188,191,192,195
 # Positions of residues where sscomp predicts rotamers
-cytoplasmicresidues=16-40,72-102,135-175,206-231
+cytoplasmicresidues=20-45,74-104,136-166,197-219
 
 ######################
 # Runtime parameters #
