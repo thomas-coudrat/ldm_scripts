@@ -144,6 +144,11 @@ bindingpocketnumber=`grep -c "[0-9]" residues-column`
 rm  pocket  pocket-edited  pocket.pdb
 
 #######icm pocket finder and edit output
+echo "#########################################################################"
+echo "ICM POCKET FINDER AND EDIT OUTPUT"
+echo "#########################################################################"
+echo `ls`
+
 for pdb in receptor[0-9]*pdb; do
     sed 's/aaaaa/'$pdb'/g' icm-pockets > icmscript
     icmdir/icm64 -vlscluster -s -picmdir < icmscript >& tmp
@@ -302,4 +307,3 @@ for pdb in receptor*sccomp.pdb; do
     rm *inx
     rm receptor*cnf $pdb.ob $pdb
 done
-
