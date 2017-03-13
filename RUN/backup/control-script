@@ -226,12 +226,10 @@ for((z=1; z<=$noofrounds; z++)); do
         #rm -r tconcoord-stuff-$x
         mkdir tconcoord-stuff-$z
         cp backup-initial/tconcoord-docking tconcoord-stuff-$z
-        #cp backup-initial/icm-rigidfit tconcoord-stuff-$z
         cp backup-initial/input.cpf tconcoord-stuff-$z
         cp backup-initial/$ligand.mol2 tconcoord-stuff-$z
         cp backup-initial/icm-ligand-dock tconcoord-stuff-$z
         cp backup-initial/icm-ligand-dock-refine-score tconcoord-stuff-$z
-        #cp backup-initial/ndx tconcoord-stuff-$z
         cp backup-initial/initial.pdb tconcoord-stuff-$z
         cp backup-initial/bbdep00.Nov.sortlib tconcoord-stuff-$z
         cp backup-initial/bbind00.Nov tconcoord-stuff-$z
@@ -251,7 +249,6 @@ for((z=1; z<=$noofrounds; z++)); do
         echo -e "\t *STARTING ROUND $z*"
         rm -r tconcoord-stuff-$x
         mkdir tconcoord-stuff-$z
-        #cp backup-initial/icm-rigidfit tconcoord-stuff-$z
         cp backup-initial/input.cpf tconcoord-stuff-$z
         cp backup-initial/$ligand.mol2 tconcoord-stuff-$z
         cp backup-initial/icm-ligand-dock tconcoord-stuff-$z
@@ -500,7 +497,7 @@ for((z=1; z<=$noofrounds; z++)); do
     editconf -f receptor-$z.pdb -o receptor-$z.pdb -label " "
     rm *receptor-$z.pdb.1*
     cd ../
-    rm -r  tconcoord-stuff-$z
+    rm -r tconcoord-stuff-$z
 
 done
 
