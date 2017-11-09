@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # This script extracts results of an LDM experiment, and stores them into
 # a RESULTS/ directory, together with a .txt file containing the information
 # about all LDM results.
@@ -9,12 +9,13 @@
 #
 # Thomas Coudrat, February 2014
 # thomas.coudrat@gmail.com
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import os
 import shutil
 import argparse
 import sys
+
 
 def main():
     """
@@ -67,6 +68,7 @@ def main():
     else:
         print("The sorting method must be either 'opus-icm' or 'icm'")
 
+
 def parsing():
     """
     Defining the parsing, and parsing arguments
@@ -90,6 +92,7 @@ def parsing():
     sort = args.sort
 
     return ldmDir, sort
+
 
 def getLDMscores(runDir):
     """
@@ -164,6 +167,7 @@ def getLDMscores(runDir):
 
     return icmList, opusList, [icmMax, icmMin, opusMax, opusMin]
 
+
 def getNormalizedScore(icmListNew, opusListNew, extremums, val, message):
     """
     Normalize both ICM and OPUS scores on 1, and combine them
@@ -185,12 +189,12 @@ def getNormalizedScore(icmListNew, opusListNew, extremums, val, message):
 
     # Loop over the the items in the list
     for icm, opus in zip(icmListNew, opusListNew):
-        #print(icm[1], ',', opus[1], '=', icm[3], '+',opus[3])
+        # print(icm[1], ',', opus[1], '=', icm[3], '+',opus[3])
         receptPath = icm[1]
         icmScore = icm[2]
-        #icmScoreID = icm[3]
+        # icmScoreID = icm[3]
         opusScore = opus[2]
-        #opusScoreID = opus[3]
+        # opusScoreID = opus[3]
         icmNorm = abs((abs(icmScore) - abs(icmMin)) /
                       (abs(icmMax) - abs(icmMin)))
         opusNorm = abs((abs(opusScore) - abs(opusMin)) /
@@ -202,7 +206,7 @@ def getNormalizedScore(icmListNew, opusListNew, extremums, val, message):
                                opusScore))
 
     normalizedList = sorted(normalizedList, key=lambda score: score[val])
-    #bestNormScore = normalizedList[0]
+    # bestNormScore = normalizedList[0]
 
     """
     print("NORMALIZED SCORE LIST")
@@ -217,6 +221,7 @@ def getNormalizedScore(icmListNew, opusListNew, extremums, val, message):
 
     return normalizedList
 
+
 def createDir(ldm_dir, results_dir):
     """
     Check if this directory exists, if it does delete it and its content, then
@@ -230,6 +235,7 @@ def createDir(ldm_dir, results_dir):
     if os.path.isdir(resDirPath):
         shutil.rmtree(resDirPath)
     os.mkdir(resDirPath)
+
 
 def makeSort(scoreList, message):
     """
@@ -260,6 +266,7 @@ def makeSort(scoreList, message):
     """
 
     return scoreListNew
+
 
 def transferResults(normalizedList, ldm_dir, results_dir):
     """
@@ -328,6 +335,7 @@ def transferResults(normalizedList, ldm_dir, results_dir):
                          opusScore + "\n")
 
     resultFile.close()
+
 
 if __name__ == "__main__":
     main()
