@@ -12,8 +12,8 @@ ligand=zm2
 ligandname=ZM2
 ###################################
 # CLuster job management
-framework=SLURM
-runname=a2a_3pwh_zm-xxxyyyxxx-
+framework=QSUB
+runname=test_QSUB-SLURM-xxxyyyxxx-
 
 ############TM start and stops
 tm1s=1
@@ -44,7 +44,7 @@ cytoplasmicresidues=16-40,72-102,135-175,206-231
 ######RUNTIME stuff########
 ###########################
 ##number of seperate dirs to run simulations
-dirs=20
+dirs=2
 #number of simulations per directory ie dirs x concoordruns is total number of conformations sampled per round
 #need to have number of runs (5) +1 ie 6
 concoordruns=30
@@ -52,7 +52,7 @@ concoordsides=10
 #################RMSD cutoff for concoord (nm)
 xxrmsdxx=0.12
 ###number of rounds
-noofrounds=8
+noofrounds=2
 #####sleep times for icm dock , sometimes the runs get stuck and stop the whole simulation so this is a stop wait event to terminate individual icm docking refinement times if they dont finish ontime (time = x*10 seconds)
 #####Might need to change for large ligands/large binding pockets
 sleep1=24

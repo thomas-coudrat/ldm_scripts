@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for ((i=0;i<=39;i++)); do
+for ((i=0;i<=1;i++)); do
     mkdir $i
     cp backup/* -r $i
     cd $i
