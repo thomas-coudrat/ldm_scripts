@@ -2,15 +2,15 @@
 
 echo "#########################"
 echo "#########################"
-echo "THIS IS TCONCOORD DOCKING"
+echo "This is TCONCOORD-DOCKING"
 echo "#########################"
 echo "#########################"
 
 echo " "
 
-echo "########################################"
-echo "GENERATING CONCOORD RESTRAINTS and STUFF"
-echo "########################################"
+echo "################################"
+echo "GENERATING CONCOORD RESTRAINTS #"
+echo "################################"
 echo `ls`
 
 module load fftw-intel/3.3.3
@@ -48,6 +48,10 @@ for((z=res7; z<=res8; z++)); do
     echo 0 >> tmp
 done
 
+echo "#########################################################################"
+echo "SAMPLING CONSTRAINED PROTEIN"
+echo "#########################################################################"
+
 cat -n tmp > concoordrestraints.dat
 numberofresidues=`grep -c CA initial.pdb`
 sed "1i $numberofresidues" concoordrestraints.dat -i
@@ -70,21 +74,20 @@ mv dist.pdb receptor00.pdb
 rm *DAT dist* disco*
 
 for pdb in receptor*pdb; do
-    echo -e "DEBUG1_receptorXX $pdb"
+    #echo -e "DEBUG1_receptorXX $pdb"
     editconf -f $pdb -o $pdb.gro
     editconf -f $pdb.gro -o $pdb
     rm *$pdb.1* $pdb.gro
 done
 
-###picking those structure under 1.2A
-echo "###################################"
-echo "PICKING THOSE STRUCTURES UNDER 1.2A"
-echo "###################################"
+echo "############################################"
+echo "PICKING STRUCTURES UNDER RMSD cutoff (1.2 A)"
+echo "############################################"
 echo `ls`
 
 rm RMSD
 for pdb in receptor*pdb; do
-    echo -e "DEBUG2_receptorXX $pdb"
+    #echo -e "DEBUG2_receptorXX $pdb"
     echo 3 3 | g_confrms -f1 xxxreceptorxxx -f2 $pdb -one -o fit >& tmp
     rm fit.gro
     echo $pdb `grep Root tmp` | awk '{print $1,$10}' >> RMSD
@@ -102,42 +105,35 @@ rm receptor*pdb
 mv tmp/receptor*pdb ./
 rm -r tmp
 
-####sidechain moves only
-#generating positional restraints for all except pocket sidechains
+# Side-chain moves only
 echo "#########################################################################"
 echo "GENERATING POSITIONAL RESTRAINTS FOR ALL EXCEPT POCKET SIDECHAINS"
 echo "#########################################################################"
 echo `ls`
 
+# Preparing make_ndx input to generate index on binding pocket side chains only
 sed -e 's/a_1\///g' -e 's/,/ /g' -e 's/[0-9].*/r&/g' -e '/[0-9].*/a\1\&\!10' restraints | sed '/1\&/a\q' > ndx-posres
 
 for pdb in receptor[0-9]*pdb; do
-    echo -e "DEBUG2bis_receptorXX $pdb"
-    echo "ABOUT TO RUN MAKE_NDX"
+    echo -e "Processing $pdb for side-chains sampling"
+    # Prepare index for binding pocket residue side-chains
     make_ndx -f $pdb < ndx-posres
-    echo "ABOUT TO RUN TDIST"
+    # Apply contraints on all but these side-chains
     echo 11 | tdist -s $pdb -inp input.cpf -pos index.ndx
-    echo "ABOUT TO RUN TDISCO"
+    # Sample side-chains, generate "concoordsides"x structures
     tdisco -n concoordsides
-    echo "ABOUT TO RUN TRJCONV"
+    # Create individual .pdb from each sampled structure
     echo 1 | trjconv -f tdisco.xtc -s ref.pdb -o $pdb.pdb -sep
     rm contab.dat grpdef.ndx grp.pml hbonds.dat ref.pdb restraints tdisco* tdist*
 done
 rm ndx-posres
 
-
-############################################################################################################################
-
-
-
-
-########################setting up parameters picking correct pocket
 echo "#########################################################################"
 echo "SETTING UP PARAMETERS PICKING CORRECT POCKET"
 echo "#########################################################################"
 echo `ls`
 
-##make sure all the HIS are HIS in PDBs
+# Make sure all the HIS are HIS in PDBs
 sed -e 's/HSE/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' -e 's/HIE/HIS/g' -e 's/HID/HIS/g' *pdb -i
 
 # Editing pocket residues: the file 'pocket' is created after the binding
@@ -158,13 +154,12 @@ grep CA pocket.pdb | awk '{print $4$5}' | sed -e '/ALA/d' -e '/GLY/d' -e '/ILE/d
 # And this counts the number of residues left in the binding pocket, after
 # hydrophobic residues have been removed
 bindingpocketnumber=`grep -c "[0-9]" residues-column`
-echo "DEBUG_bindingPocketNumber: $bindingpocketnumber"
+#echo "DEBUG_bindingPocketNumber: $bindingpocketnumber"
 #mv pocket pocket_SAVE
 #mv pocket-edited pocket-edited_SAVE
 #mv pocket.pdb pocket.pdb_SAVE
 rm  pocket  pocket-edited  pocket.pdb
 
-#######icm pocket finder and edit output
 echo "#########################################################################"
 echo "ICM POCKET FINDER AND EDIT OUTPUT"
 echo "#########################################################################"
@@ -174,7 +169,7 @@ echo `ls`
 # selection of cytoplasmic residues given in control-script. The residues other
 # than the cytoplasmic residues are searched for pockets
 for pdb in receptor[0-9]*pdb; do
-    echo -e "DEBUG3a_receptorXX $pdb"
+    #echo -e "DEBUG3a_receptorXX $pdb"
     sed 's/aaaaa/'$pdb'/g' icm-pockets > icmscript
     icmdir/icm64 -vlscluster -s -picmdir < icmscript >& tmp
     rm tmp
@@ -183,14 +178,14 @@ done
 # Extract the list of residues (and all info) corresponding to the first and
 # best pocket for each .tab file saved earlier
 for tab in receptor*.tab; do
-    echo -e "DEBUG3b_receptorTab $tab"
+    #echo -e "DEBUG3b_receptorTab $tab"
     grep "g_pocket1 a" $tab > $tab-pocket
 done
 
 # Change the pocket definition to a file that contains the residues with their
 # 3 letter code
 for pocket in receptor*pocket; do
-    echo -e "DEBUG3c_receptorPocket $pocket"
+    #echo -e "DEBUG3c_receptorPocket $pocket"
     grep -o '[A-Z][0-9][:,"|]' $pocket >1
     grep -o '[A-Z][0-9][0-9][:,"|]' $pocket >2
     grep -o '[A-Z][0-9][0-9][0-9][:,"|]' $pocket >3
@@ -208,22 +203,17 @@ for pocket in receptor*pocket; do
     rm edit
 done
 
-
-
-########counting pocketresidues from icmpocket & gettign rid of those structures with poor pockets ####
 echo "#########################################################################"
-echo "COUNTING POCKET RESIDUES FROM ICMPOCKET and GETTING RID OF THOSE
-STRUCTURES WITH POOR POCKETS"
+echo "COUNTING POCKET RESIDUES FROM ICMPOCKET and GETTING RID OF THOSE STRUCTURES WITH POOR POCKETS"
 echo "#########################################################################"
 echo `ls`
-
 
 rm pocketcount
 # This creates a file that lists all the residues that were in the previous
 # pocket, and are also in the pocket found by pocketFinder. It makes sure the
 # pocket doesn't drastically change, and forces incremental 'induced fit'
 for pocket in *tab-pocket; do
-    echo -e "DEBUG4a_pockets $pocket"
+    #echo -e "DEBUG4a_pockets $pocket"
     echo $pocket `grep -f residues-column -c $pocket` >> pocketcount
 done
 
@@ -239,13 +229,12 @@ echo $pocketresiduescutoff
 awk '$2 >= '$pocketresiduescutoff' {print $1}' pocketcount >> goodpocket
 sed 's/.tab-pocket//g' goodpocket -i
 
-
-echo "DEBUG4b_goodPocketFile "
+#echo "DEBUG4b_goodPocketFile "
 more goodpocket
 
 mkdir tmp
 for pdb in `cat goodpocket`; do
-    echo -e "DEBUG4c_goodPocket $pdb"
+    #echo -e "DEBUG4c_goodPocket $pdb"
     mv $pdb tmp
 done
 
@@ -253,16 +242,13 @@ rm receptor*pdb*
 mv tmp/* ./
 rm -r tmp
 
-
-#####adding sidechains onto fitted fragments in areas distinct from docking area
 echo "#########################################################################"
-echo "ADDING SIDECHAINS ONTO FITTED FRAGMENTS IN AREAS DISTINCT FROM DOCKING
-AREA"
+echo "ADDING SIDECHAINS ONTO FITTED FRAGMENTS IN AREAS DISTINCT FROM DOCKING AREA"
 echo "#########################################################################"
 echo `ls`
 
 for pdb in receptor[0-9]*.pdb; do
-    echo -e "DEBUG5_receptorXX $pdb"
+    #echo -e "DEBUG5_receptorXX $pdb"
     editconf -f $pdb -o $pdb -label " "
     rm *$pdb.1*
     ./sccomp -mu=cytoplasmicresidues -l=1 $pdb
@@ -270,7 +256,6 @@ for pdb in receptor[0-9]*.pdb; do
     rm $pdb
 done
 
-####minimize backbone and reform
 echo "#########################################################################"
 echo "MINIMIZE BACKBONE AND REFORM"
 echo "#########################################################################"
@@ -312,13 +297,17 @@ for complex in receptor*sccomp.pdb; do
     rm *complex.pdb.1*
 done
 
-#### ligand docking and refinement
 echo "#########################################################################"
 echo "LIGAND DOCKING AND REFINEMENT"
 echo "#########################################################################"
 echo `ls`
 
 for pdb in receptor*sccomp.pdb; do
+    ################################
+    # Refine receptor, dock ligand #
+    ################################
+    
+    # Docks the ligand, no output
     sed "s|aaaaa|$pdb|g" icm-ligand-dock > dock
     icmdir/icm64 -vlscluster -s -picmdir < dock >& tmp &
 
@@ -336,6 +325,12 @@ for pdb in receptor*sccomp.pdb; do
     kill -KILL $pid1
     rm tmp
 
+    ################################################
+    # Refine complex, refine pocket, score inplace #
+    ################################################
+    
+    # Outputs a receptorxxx-rl.pdb molecular complex, and a receptorxxx.score
+    # that has the score for the ligand/receptor interaction
     sed "s|aaaaa|$pdb|g" icm-ligand-dock-refine-score > refine
     icmdir/icm64 -vlscluster -s -picmdir < refine >& $pdb.score &
 
@@ -357,4 +352,3 @@ for pdb in receptor*sccomp.pdb; do
     rm *inx
     rm receptor*cnf $pdb.ob $pdb
 done
-

@@ -1,83 +1,85 @@
 #!/usr/bin/env bash
 
-#######SET BELOW ########
-###########################
-#receptor - ligand stuff###
-###########################
-##name of receptor PDB file
-receptor=a2a_3pwh_noLoop.pdb
-##name of .mol2 file
-ligand=zm2
-#reference name in mol2 file
-ligandname=ZM2
-###################################
-# CLuster job management
-framework=QSUB
-runname=test_QSUB-SLURM-xxxyyyxxx-
-
-############TM start and stops
-tm1s=1
-tm1e=26
-tm2s=27
-tm2e=55
-tm3s=56
-tm3e=89
-tm4s=90
-tm4e=111
-tm5s=112
-tm5e=153
-tm6s=154
-tm6e=192
-tm7s=193
-tm7e=231
-
-#position of disulphide between top of tm3 and ecl & others
-disul1=a_1/59
-disul2=a_1/112
-##residue number of positions where icm searchs in docking
-dockingregion=a_1/7,50,51,53,54,63,66,67,70,114,123,127,132,180,183,184,197,200
-
-####positions of residues where sscomp predicts rotamers
-cytoplasmicresidues=16-40,72-102,135-175,206-231
-
-###########################
-######RUNTIME stuff########
-###########################
-##number of seperate dirs to run simulations
-dirs=2
-#number of simulations per directory ie dirs x concoordruns is total number of conformations sampled per round
-#need to have number of runs (5) +1 ie 6
-concoordruns=30
-concoordsides=10
-#################RMSD cutoff for concoord (nm)
-xxrmsdxx=0.12
-###number of rounds
-noofrounds=2
-#####sleep times for icm dock , sometimes the runs get stuck and stop the whole simulation so this is a stop wait event to terminate individual icm docking refinement times if they dont finish ontime (time = x*10 seconds)
-#####Might need to change for large ligands/large binding pockets
-sleep1=24
-sleep2=24
-
-#########################################
-###locations of programs used by script##
-#########################################
+#################
+# Program paths #
+#################
 
 icmdir=/vlsci/VR0024/tcoudrat/bin/icm-3.7-3b
 opuspsp=/vlsci/VR0024/tcoudrat/bin/OPUS_PSP
 opusrota=/vlsci/VR0024/tcoudrat/bin/OPUS_Rota
-#concoord
-#gromacs
 
-############################################
-################USER########################
-############################################
+##########################
+# CLuster job management #
+##########################
 
+# Cluster queuing system: SLURM or QSUB
+framework=SLURM
+# Task name
+runname=b2_4LDE_BI-xxxyyyxxx-
+# Username on Cluster
 user=tcoudrat
 
-###################################################################################################################################
-###################################################################################################################################
-##############################################################END of parameters to change##########################################
-#reformatting input date from stuff for sccomp into distance restraints for concoord
+#####################
+# Receptor & Ligand #
+#####################
+
+# Name of receptor PDB file
+receptor=b2_4lde_ldm_noLoop.pdb
+# Name of .mol2 file
+ligand=p0g
+# Reference name in mol2 file
+ligandname=P0G
+# TM start and stops
+tm1s=1
+tm1e=31
+tm2s=32
+tm2e=60
+tm3s=61
+tm3e=91
+tm4s=92
+tm4e=115
+tm5s=116
+tm5e=150
+tm6s=151
+tm6e=183
+tm7s=184
+tm7e=219
+# Position of disulphide between top of tm3 and ecl & others
+disul1=a_1/61
+disul2=a_1/116
+# Residue number of positions where icm searchs in docking
+dockingregion=a_1/59,64,65,68,69,118,119,120,174,175,178,181,182,184,187,188,191,192,195
+# Positions of residues where sscomp predicts rotamers
+cytoplasmicresidues=20-45,74-104,136-166,197-219
+
+######################
+# Runtime parameters #
+######################
+
+# Number of seperate dirs to run simulations
+dirs=2
+# Number of simulations per directory ie dirs x concoordruns is total number of
+# conformations sampled per round. Need to have number of runs (5) +1 ie 6
+concoordruns=5
+concoordsides=10
+# RMSD cutoff for concoord (nm)
+xxrmsdxx=0.12
+# Number of rounds
+noofrounds=2
+# Sleep times for icm dock, sometimes the runs get stuck and stop the whole
+# simulation so this is a stop wait event to terminate individual icm docking
+# refinement times if they dont finish ontime (time = x*10 seconds)
+sleep1=24
+sleep2=24
+
+################
+################
+# Script start #
+################
+################
+
+# Reformatting input data from stuff for sccomp into distance restraints for
+# concoord and docking pocket search area
 res1=`echo $cytoplasmicresidues | sed -e 's/[a-z]/ /g' -e 's/,/ /g'  -e 's/-/ /g' | awk '{print $1}'`
 res2=`echo $cytoplasmicresidues | sed -e 's/[a-z]/ /g' -e 's/,/ /g'  -e 's/-/ /g' | awk '{print $2}'`
 res3=`echo $cytoplasmicresidues | sed -e 's/[a-z]/ /g' -e 's/,/ /g'  -e 's/-/ /g' | awk '{print $3}'`
@@ -95,17 +97,18 @@ res4p=`expr $res4 + 1`
 res6p=`expr $res6 + 1`
 ###################################################################################################################################
 
+###############################
+# Changes to external scripts #
+###############################
 
-################################################CHANGES to external scripts#########################################################
-
-sed "s|ligand|$ligand|g"  icm-initial-dock* icm-ligand-dock icm-ligand-dock-refine-score -i
+sed "s|ligand|$ligand|g" icm-ligand-dock icm-ligand-dock-refine-score -i
 sed -e "s|concoordruns|$concoordruns|g" -e "s|concoordsides|$concoordsides|g" tconcoord-docking* -i
 sed "s|xxrmsdxx|$xxrmsdxx|g" tconcoord-docking* -i
-sed "s|icmdir|$icmdir|g" icm-initial-dock* initial-docking tconcoord-docking* icm-ligand-dock icm-ligand-dock-refine-score  -i
+sed "s|icmdir|$icmdir|g" initial-docking tconcoord-docking* icm-ligand-dock icm-ligand-dock-refine-score  -i
 sed -e "s|sleep1|$sleep1|g" -e "s|sleep2|$sleep2|g" tconcoord-docking* -i
 sed -e "s|user|$user|g"  tconcoord-docking* -i
-sed -e "s|disul1|$disul1|g" -e "s|disul2|$disul2|g" icm-initial-dock icm-ligand-dock -i
-sed "s|dockingregion|$dockingregion|g" icm-initial-dock icm-ligand-dock -i
+sed -e "s|disul1|$disul1|g" -e "s|disul2|$disul2|g" icm-ligand-dock -i
+sed "s|dockingregion|$dockingregion|g" icm-ligand-dock -i
 sed "s|cytoplasmicresidues|$cytoplasmicresidues|g" tconcoord-docking* -i
 sed "s|opuspsp|$opuspsp|g" config.psp -i
 sed "s|receptor|$receptor|g" initial-docking -i
@@ -115,16 +118,19 @@ sed -e "s|tm1s|$tm1s|g"  -e "s|tm1e|$tm1e|g" -e "s|tm2s|$tm2s|g" -e "s|tm2e|$tm2
 # Only one of SLURM or QSUB is used, however for simplicity files for both frameworks are kept in directory
 sed "s|runname|$runname|g" slurm-script slurm-script-initial -i
 sed "s|runname|$runname|g" qsub-script qsub-script-initial -i
-# Definition of the residues ICM will try to find pockets, after the initial
-# docking stage
-sed -e  "s|res1m|$res1m|g" -e  "s|res1|$res1|g" -e  "s|res2p|$res2p|g" -e  "s|res2|$res2|g" -e  "s|res3m|$res3m|g" -e  "s|res3|$res3|g" -e  "s|res4p|$res4p|g" -e  "s|res4|$res4|g" -e  "s|res5m|$res5m|g" -e  "s|res5|$res5|g" -e  "s|res6p|$res6p|g" -e  "s|res6|$res6|g" -e  "s|res7m|$res7m|g" -e  "s|res7|$res7|g" -e  "s|res8|$res8|g" tconcoord-docking* icm-pockets* -i
+# Start and end of the residue sequences that correspond area of docking AND protein sampling
+sed -e "s|res1m|$res1m|g" -e "s|res1|$res1|g" -e "s|res2p|$res2p|g" -e "s|res2|$res2|g" -e "s|res3m|$res3m|g" -e "s|res3|$res3|g" -e "s|res4p|$res4p|g" -e "s|res4|$res4|g" -e "s|res5m|$res5m|g" -e "s|res5|$res5|g" -e "s|res6p|$res6p|g" -e "s|res6|$res6|g" -e "s|res7m|$res7m|g" -e "s|res7|$res7|g" -e "s|res8|$res8|g" tconcoord-docking* icm-pockets* -i
 
 echo $dockingregion > restraints
 echo $dockingregion > pocket
 
-####################################################################################################################################
+###################################
+# Submit initial job (SLURM/QSUB) #
+###################################
 
-# Starting the initial script, SLURM
+#########
+# SLURM #
+#########
 if [ "$framework" == "SLURM" ] ; then
     dir=`pwd`
     echo $dir
@@ -159,9 +165,11 @@ if [ "$framework" == "SLURM" ] ; then
 
     # remove the slurm output
     rm slurm-$jobID.out
-    echo dunn diddly dunn
+    echo "COMPLETED INITIAL JOB"
 
-# Or QSUB
+########
+# QSUB #
+########
 elif [ "$framework" == "QSUB" ] ; then
     dir=`pwd`
     echo $dir
@@ -192,36 +200,34 @@ elif [ "$framework" == "QSUB" ] ; then
 
     # remove the qsub output
     rm $runname*.e* $runname*.o*
-    echo dunn diddly dunn
+    echo "COMPLETED INITIAL JOB"
 fi
 
+###################
+# Starting rounds #
+###################
 
-#############################################2nd part###################################
-
+# Create a backup
 mkdir backup-initial
 cp * backup-initial
 mv PARNIS_AA backup-initial
 
-rm $receptor slurm-script qsub-script *.mol2 icm-initial-dock icm-ligand-dock icm-ligand-dock-refine-score initial.pdb input.cpf tconcoord-docking  bbdep00.Nov.sortlib bbind00.Nov sccomp config.psp opus_psp em.mdp concoordinput $receptor-bak initial-docking restraints icm-pockets pocket receptorligandndx tconcoord-docking-lig
+# Clean up directory
+rm $receptor slurm-script qsub-script *.mol2 icm-ligand-dock icm-ligand-dock-refine-score initial.pdb input.cpf tconcoord-docking bbdep00.Nov.sortlib bbind00.Nov sccomp config.psp opus_psp em.mdp concoordinput $receptor-bak initial-docking restraints icm-pockets pocket receptorligandndx tconcoord-docking-lig
 
-###############################
-###############################
-#####cycles start here
-###############################
-
-echo -e "\t Starting cycles now!"
-
+echo -e "\t Starting rounds now!"
+# Loop over X number of rounds
 for((z=1; z<=$noofrounds; z++)); do
 
     # This will keep track of the round we are in
     x=`expr $z - 1`
     echo $z
 
-    # for the first round only, do this
+    # For the first round only, do this
     if [ $z -eq 1 ] ; then
-        echo -e "\t Initial run!"
+        echo -e "\t *STARTING ROUND 1*"
         #rm -r tconcoord-stuff-$x
-    mkdir tconcoord-stuff-$z
+        mkdir tconcoord-stuff-$z
         cp backup-initial/tconcoord-docking tconcoord-stuff-$z
         #cp backup-initial/icm-rigidfit tconcoord-stuff-$z
         cp backup-initial/input.cpf tconcoord-stuff-$z
@@ -243,10 +249,9 @@ for((z=1; z<=$noofrounds; z++)); do
         cp backup-initial/pocket tconcoord-stuff-$z
         cp backup-initial/icm-pockets tconcoord-stuff-$z
         cp backup-initial/receptorligandndx tconcoord-stuff-$z
-        echo -e "\t created tconcoord-stuff dir, and copied all backup-initial files into it"
-        # for all other rounds after the first one
+    # For all other rounds after the first one
     else
-        echo -e "\t Starting round $z"
+        echo -e "\t *STARTING ROUND $z*"
         rm -r tconcoord-stuff-$x
         mkdir tconcoord-stuff-$z
         #cp backup-initial/icm-rigidfit tconcoord-stuff-$z
@@ -268,11 +273,17 @@ for((z=1; z<=$noofrounds; z++)); do
         cp backup-initial/pocket tconcoord-stuff-$z
         cp backup-initial/receptorligandndx tconcoord-stuff-$z
         cp backup-initial/icm-pockets tconcoord-stuff-$z
-        ###pdb from last round added to new round and different docking due to now ligand involved
+        # PDB from last round added to new round. The script tconcoord-docking-lig
+        # is now used as from round 2 onwards, we deal with a receptor/ligand complex.
         cp filtered/receptor-$x.pdb tconcoord-stuff-$z/initial.pdb
         cp backup-initial/tconcoord-docking-lig tconcoord-stuff-$z/tconcoord-docking
         echo -e "\t created tconcoord-stuff dir, and copied content of backup-initial files to it"
     fi
+    echo -e "\t created tconcoord-stuff dir, and copied content of backup-initial files to it"
+
+    ######################################
+    # Creating X independant directories #
+    ######################################
 
     echo -e "\t Copying files from tconcoord-stuff to X dirs"
 
@@ -284,10 +295,18 @@ for((z=1; z<=$noofrounds; z++)); do
         cd ../
     done
 
+    ################################
+    # Job submission within rounds #
+    ################################
+
+    #########
+    # SLURM #
+    #########
+
     if [ "$framework" == "SLURM" ] ; then
         echo -e "\t Modifying the SLURM commands, and running them"
 
-        ########################setting up SLURM stuff######
+        # Setting up SLURM jobs
         cp backup-initial/slurm-script ./
         dir=`pwd`
         echo $dir
@@ -305,8 +324,8 @@ for((z=1; z<=$noofrounds; z++)); do
         #cp slurm-script slurm-script-0
         sed "s|MY_DIR_NUMBER|$dirs|g" slurm-script > slurm-script-0
 
-        # In this for loop, all numbered slurm scripts in this directory are submitted,
-        # and the variable jobIDs keeps the IDs of all those jobs
+        # In this for loop, all numbered slurm scripts in this directory are
+        # submitted, and the variable jobIDs keeps the IDs of all those jobs
         jobIDs=""
         for start in slurm-script-[0-9]*; do
             jobID=( `sbatch $start` )
@@ -319,8 +338,9 @@ for((z=1; z<=$noofrounds; z++)); do
         echo -e "\t Now that they were ran, checking to see when they are finished:"
         echo -e "$jobIDs"
 
-        # This while loop will check every minute if all jobs have finished, using the
-        # jobIDs variable and making sure all jobs are completed before moving on
+        # This while loop will check every minute if all jobs have finished,
+        # using the jobIDs variable and making sure all jobs are completed
+        # before moving on
         while :
         do
             runningjobs=0
@@ -356,11 +376,15 @@ for((z=1; z<=$noofrounds; z++)); do
             fi
         done
 
+    ########
+    # QSUB #
+    ########
+
     elif [ "$framework" == "QSUB" ] ; then
 
         echo -e "\t Modifying the QSUB commands, and running them"
 
-        ########################setting up QSUB stuff######
+        # Setting up QSUB jobs
         cp backup-initial/qsub-script ./
         dir=`pwd`
         echo $dir
@@ -410,9 +434,15 @@ for((z=1; z<=$noofrounds; z++)); do
         done
     fi
 
-    echo -e "\t Getting icmscore for each solution, from each dir, and puting them into a dir called icmscore"
+    echo "############################################"
+    echo "# Scoring based on ICM and OPUS_PSP scores #"
+    echo "############################################"
 
-    #getting icmscore for each solution from each directory and putting them in dir called icmscore#
+    # Getting icmscore of complexes in:
+    # - all directories
+    # - within this this replica
+    # - for this round ($z)
+    # Place those in a new directory 'icmscore'
     rm -r icmscore
     mkdir icmscore
 
@@ -426,15 +456,13 @@ for((z=1; z<=$noofrounds; z++)); do
         echo $jobdir
     done
 
-    echo -e "\t getting the best docking score from ICM"
-
-    ###########getting best docking score from icm (tail -n 1) this ineffect moves the best docked structure to the next round ###
-    ###########rather than going through another stage using OPUS_PSP to select the structure for the next round
+    # Get the name of the complex that has the best icmscore
     cd icmscore
-    grep "[0-9]" *score |sed -e 's/:/: /g' -e 's/.score-score:/-rl.pdb/g' | sort +1 -2 -r -g | tail -n 1 | awk '{print $1}' > best
+    grep "[0-9]" *score | sed -e 's/:/: /g' -e 's/.score-score:/-rl.pdb/g' | sort +1 -2 -r -g | tail -n 1 | awk '{print $1}' > best
     cp best ../
     cd ../
 
+    # Copy that best icmscore complex to filtered-tmp
     mkdir filtered
     rm -r filtered-tmp
     mkdir filtered-tmp
@@ -444,14 +472,20 @@ for((z=1; z<=$noofrounds; z++)); do
     sh c
     rm a b c best
 
+    # Applying OPUS_PSP score on that best icmscore complex
     cd filtered-tmp
     cp ../backup-initial/opus_psp ./
     cp ../backup-initial/config.psp ./
     sed 's/HIE/HIS/g' *pdb -i
     ls *pdb > in
     ./opus_psp < in > out
+
+    # Moving the complex to the filtered directory
     grep receptor out | sort +1 -2 -r -g | tail -n 1 | awk '{print $1}' | sed "s|[0-9].*|mv &* \.\.\/filtered\/receptor-$z.pdb|g" > move
     sh move
+
+    # Append ICMSCORE and OPUS_PSP scores to icm-running-best and
+    # opus-running-best files, respectively
     grep receptor out | sort +1 -2 -r -g | tail -n 1 | awk '{print $1}' | sed 's/[0-9].*/grep "[0-9]" \.\.\/icmscore\/&*/g' > icm
     echo receptor-$z.pdb `sh icm` >> ../icm-running-best
     grep receptor out | sort +1 -2 -r -g | tail -n 1 | awk '{print $1}' | sed 's/[0-9].*/grep & out/g' > opus
@@ -460,7 +494,9 @@ for((z=1; z<=$noofrounds; z++)); do
     rm -r filtered-tmp
     rm -r icmscore
 
-    #######get rid of unwanted SLURM stuff#####
+    #########################################
+    # Get rid of unwanted SLURM/QSUB output #
+    #########################################
 
     if [ "$framework" == "SLURM" ] ; then
         rm slurm-script-[0-9]*
@@ -471,17 +507,22 @@ for((z=1; z<=$noofrounds; z++)); do
     rm -r icmscore
     rm -r [0-9]*
 
-    ###################################################################################################################################
-    ##preparing for a new round and getting tms from best solution###
+    ################################################################
+    # Preparing for a new round and getting tms from best solution #
+    ################################################################
 
     cd filtered
     sed -e 's/HIE/HIS/g'  -e "s|$ligandname|LIG|g" -e 's/HETATM/ATOM  /g' receptor-$z.pdb -i
     editconf -f receptor-$z.pdb -o receptor-$z.pdb -label " "
     rm *receptor-$z.pdb.1*
     cd ../
-    rm -r  tconcoord-stuff-$z
+    rm -r tconcoord-stuff-$z
+
 done
 
+#################
+# Final cleanup #
+#################
 rm slurm-script*
 rm qsub-script*
 #rm *.[eo]*

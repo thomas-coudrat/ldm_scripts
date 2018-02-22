@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#removing icm hie to his
-
+# Removing ICM's HIE to HIS
 sed -e 's/HIE/HIS/g' -e 's/HID/HIS/g' -e 's/HSP/HIS/g' -e 's/HSD/HIS/g' receptor -i
 cp receptor receptor-bak
 
@@ -39,11 +38,9 @@ for complex in receptor; do
     rm *complex.pdb.1*
 done
 
-
 for((z=1; z<=3; z++)); do
     dist-concoord -p initial.pdb -dssp ./dssp < concoordinput
     disco-concoord -d dist.dat -p dist.pdb -np 1 -op initial.pdb -ref -reg 10000
     rm *DAT dis*
     mv initial.pdb1.pdb initial.pdb
 done
-
