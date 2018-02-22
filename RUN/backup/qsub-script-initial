@@ -1,8 +1,8 @@
-#!/bin/sh
-#$ -l h_rt=50:00:00
-#$ -l h_vmem=2G
-# $ -q hqu9
-#$ -l dpod=true
+#!/bin/bash
+#$ -l h_rt=10:00:00
+#$ -l h_vmem=1G
+#$ -q hqu9
+#$ -l dpod=1
 #$ -cwd
 #$ -N runname
 

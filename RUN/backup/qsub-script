@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 #$ -S /bin/sh
-#$ -l h_rt=100:00:00
-#$ -l h_vmem=2G
-# $ -q hqu9
-#$ -l dpod=true
+#$ -l h_rt=30:00:00
+#$ -l h_vmem=1G
+#$ -q hqu9
+#$ -l dpod=1
 #$ -cwd
 #$ -N runname-yyy
 
